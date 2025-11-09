@@ -540,7 +540,6 @@ const handleFileUpload = async (messageData) => {
   const handleSessionRsvp = async (session, response) => {
     try {
       const userId = user?.id || localStorage.getItem("userId");
-      // alert("session id "+session.id)
       const res = await fetch(`${API_BASE}/sessions/${session.id}/rsvp`, {
         method: 'POST',
         headers: {

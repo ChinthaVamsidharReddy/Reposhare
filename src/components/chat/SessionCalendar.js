@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarIcon, ClockIcon, UserGroupIcon } from '@heroicons/react/24/outline';
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.tz.setDefault("Asia/Kolkata");
 
 const API_BASE = "http://localhost:8080/api";
 const token = localStorage.getItem("token");
@@ -14,7 +7,7 @@ const token = localStorage.getItem("token");
 const SessionCalendar = ({ groupId, onSessionClick }) => {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(dayjs().tz("Asia/Kolkata").toDate());
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
     if (groupId) {
@@ -29,8 +22,8 @@ const SessionCalendar = ({ groupId, onSessionClick }) => {
       });
       if (res.ok) {
         const data = await res.json();
-        // ✅ Filter confirmed sessions
-        const confirmed = data.filter((s) => s.confirmed && !s.isPoll);
+        // Filter only confirmed sessions for calendar
+        const confirmed = data.filter(s => s.confirmed && !s.isPoll);
         setSessions(confirmed);
       }
     } catch (err) {
@@ -40,33 +33,30 @@ const SessionCalendar = ({ groupId, onSessionClick }) => {
     }
   };
 
-  // ✅ Convert UTC → IST for display
- const formatTime = (dateTime) => {
-  if (!dateTime) return '';
-  return dayjs(dateTime).tz("Asia/Kolkata").format("hh:mm A");
-};
+  const formatTime = (dateTime) => {
+    if (!dateTime) return '';
+    const date = new Date(dateTime);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
 
-const formatDate = (dateTime) => {
-  if (!dateTime) return '';
-  return dayjs(dateTime).tz("Asia/Kolkata").format("MMM D, YYYY");
-};
+  const formatDate = (dateTime) => {
+    if (!dateTime) return '';
+    const date = new Date(dateTime);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
-
-  // ✅ Fix date filtering by converting to IST day
   const getSessionsForDate = (date) => {
-    const selectedDay = dayjs(date).tz("Asia/Kolkata").format("YYYY-MM-DD");
-    return sessions.filter((s) => {
+    return sessions.filter(s => {
       if (!s.startTime) return false;
-      const sessionDay = dayjs.utc(s.startTime).tz("Asia/Kolkata").format("YYYY-MM-DD");
-      return sessionDay === selectedDay;
+      const sessionDate = new Date(s.startTime);
+      return sessionDate.toDateString() === date.toDateString();
     });
   };
 
   const todaySessions = getSessionsForDate(selectedDate);
-
   const upcomingSessions = sessions
-    .filter((s) => s.startTime && dayjs.utc(s.startTime).isAfter(dayjs()))
-    .sort((a, b) => dayjs.utc(a.startTime).diff(dayjs.utc(b.startTime)))
+    .filter(s => s.startTime && new Date(s.startTime) > new Date())
+    .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
     .slice(0, 5);
 
   return (
@@ -87,10 +77,8 @@ const formatDate = (dateTime) => {
             <div className="flex items-center gap-2 mb-2">
               <input
                 type="date"
-                value={dayjs(selectedDate).format("YYYY-MM-DD")}
-                onChange={(e) =>
-                  setSelectedDate(dayjs(e.target.value).tz("Asia/Kolkata").toDate())
-                }
+                value={selectedDate.toISOString().split('T')[0]}
+                onChange={(e) => setSelectedDate(new Date(e.target.value))}
                 className="text-sm border border-gray-300 dark:border-dark-border rounded px-2 py-1 dark:bg-dark-input dark:text-white"
               />
             </div>
@@ -161,3 +149,4 @@ const formatDate = (dateTime) => {
 };
 
 export default SessionCalendar;
+
